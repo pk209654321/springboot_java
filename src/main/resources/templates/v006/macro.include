@@ -1,0 +1,64 @@
+<#-- 本文件包含一些公共的函数,本文件会被其它模板自动include -->
+
+<#-- 将value变成jsp el表达式,主要由于FreeMarker生成表达式不方便 -->
+<#macro jspEl value>${r"${"}${value}}</#macro>
+
+<#-- mybatis -->
+<#macro sharp value>${r"#{"}${value}}</#macro>
+
+<#-- 生成java构造函数 -->
+<#macro generateConstructor constructor>
+	public ${constructor}(){
+	}
+
+	public ${constructor}(
+	<#list table.compositeIdColumns as column>
+		${column.javaType} ${column.underscoreName}<#if column_has_next>,</#if>
+	</#list>		){
+	<#list table.compositeIdColumns as column>
+		<#if column.pk>
+		this.${column.underscoreName} = ${column.underscoreName};
+		</#if>
+	</#list>	
+	}
+
+</#macro>
+
+<#macro generateJavaColumns>
+	<#list table.columns as column>
+    /**
+     * Sets the ${column.underscoreName?replace("_", " ")} .
+     *
+     * @param ${column.underscoreName} the new ${column.underscoreName?replace("_", " ")}
+     */
+    public void set${column.underscoreName?cap_first}(${column.simpleJavaType} ${column.underscoreName}){
+        this.${column.underscoreName} = ${column.underscoreName};
+    }
+
+    /**
+     * Gets the ${column.underscoreName?replace("_", " ")} .
+     *
+     * @return the ${column.underscoreName?replace("_", " ")}
+     */
+    public ${column.simpleJavaType} get${column.underscoreName?cap_first}(){
+    <#if column.simpleJavaType == "String">
+        return ${column.underscoreName} == null ? null : ${column.underscoreName}.trim();
+    <#else>
+        return ${column.underscoreName};
+	</#if>
+    }
+    
+	</#list>
+</#macro>
+
+<#macro generateJavaColumnsDto>
+	<#list table.columns as column>
+	public void set${column.underscoreName?cap_first}(${column.simpleJavaType} ${column.underscoreName}){
+		this.${column.underscoreName} = ${column.underscoreName};
+	}
+	
+	public ${column.simpleJavaType} get${column.underscoreName?cap_first}(){
+		return ${column.underscoreName};
+	}
+	</#list>
+</#macro>

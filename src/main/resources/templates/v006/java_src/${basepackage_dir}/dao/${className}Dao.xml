@@ -1,0 +1,225 @@
+<#include "/macro.include"/>
+<#assign className = table.className>   
+<#assign classNameFirstLower = table.classNameFirstLower>  
+<#assign namespace>${className}.</#assign>
+<#assign daoPackage>${basepackage}.dao</#assign>
+<#assign entityPackage>${basepackage}.entity</#assign>
+<#assign dtoPackage>${basepackage}.dto</#assign>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="${daoPackage}.${className}Dao">
+
+	<sql id="Base_Column_List" >
+	  <#list table.columns as column>
+            ${column.sqlName}<#if column_has_next>,</#if>
+        </#list>
+	</sql>
+	
+	<select id="qry${className}" parameterType="${dtoPackage}.${className}Dto" resultType="${entityPackage}.${className}">
+	SELECT 
+          <include refid="Base_Column_List" />
+            FROM ${table.sqlName} 
+		<where>
+	        <#list table.columns as column>
+	        	<#if column.sqlName != "create_time" && column.sqlName != "update_time">
+	        	<#if column.sqlTypeName?upper_case != "BLOB" && column.sqlTypeName?upper_case != "CLOB">
+	        	<#if column.sqlTypeName?upper_case == "VARCHAR" ||  column.sqlTypeName?upper_case=="CHAR">
+	        	<if test="${column.sqlName} != null and ${column.sqlName} != ''">
+	        		and ${column.sqlName} = ${r"#{"}${column.sqlName}${r"}"}
+	        	</if>
+	        	<#else>
+	        	<if test="${column.sqlName} != null ">
+	        		and ${column.sqlName} = ${r"#{"}${column.sqlName}${r"}"}
+	        	</if>
+	        	</#if>
+	        	</#if>
+	        	</#if>
+	        </#list>
+		</where>
+		<if test="rows != 0">
+			LIMIT ${r"#{"}offset}, ${r"#{"}rows}
+		</if>
+	</select>
+	
+    <#if genApi == "true" >
+    <select id="qryApi${className}" parameterType="${dtoPackage}.${className}Dto" resultType="${entityPackage}.${className}">
+    SELECT 
+          <include refid="Base_Column_List" />
+            FROM ${table.sqlName} 
+        <where>
+            <#list table.columns as column>
+                <#if column.sqlName != "create_time" && column.sqlName != "update_time">
+                <#if column.sqlTypeName?upper_case != "BLOB" && column.sqlTypeName?upper_case != "CLOB">
+                <#if column.sqlTypeName?upper_case == "VARCHAR" ||  column.sqlTypeName?upper_case=="CHAR">
+                <if test="${column.sqlName} != null and ${column.sqlName} != ''">
+                    and ${column.sqlName} = ${r"#{"}${column.sqlName}${r"}"}
+                </if>
+                <#else>
+                <if test="${column.sqlName} != null ">
+                    and ${column.sqlName} = ${r"#{"}${column.sqlName}${r"}"}
+                </if>
+                </#if>
+                </#if>
+                </#if>
+            </#list>
+        </where>
+    </select>
+    </#if>
+	
+	<select id="get${className}Count" resultType="int" parameterType="${dtoPackage}.${className}Dto">
+		select count(*)
+            FROM ${table.sqlName} 
+        <where>
+            <#list table.columns as column>
+                <#if column.sqlName != "create_time" && column.sqlName != "update_time">
+            	<#if column.sqlTypeName?upper_case != "BLOB" && column.sqlTypeName?upper_case != "CLOB">
+            	 <#if column.sqlTypeName?upper_case == "VARCHAR" ||  column.sqlTypeName?upper_case=="CHAR">
+	        	<if test="${column.sqlName} != null and ${column.sqlName} != ''">
+	        		and ${column.sqlName} = ${r"#{"}${column.sqlName}${r"}"}
+	        	</if>
+            	  <#else>
+	        	<if test="${column.sqlName} != null ">
+	        		and ${column.sqlName} = ${r"#{"}${column.sqlName}${r"}"}
+	        	</if>
+            		</#if>
+            	</#if>
+            	</#if>
+            </#list>
+        </where>
+	</select>
+
+	<select id="get${className}" resultType="${entityPackage}.${className}" parameterType="${dtoPackage}.${className}Dto">
+        SELECT 
+         <include refid="Base_Column_List" />
+        <![CDATA[
+            FROM ${table.sqlName} 
+            WHERE 
+            <#list table.pkColumns as pk>
+			    ${pk.sqlName} = ${r"#{"}${pk.sqlName}${r"}"}
+                <#if pk_has_next> and </#if>
+            </#list>
+        ]]>
+	</select>
+	
+	<insert id="add${className}" parameterType="${entityPackage}.${className}" <#if useGenKey == "true"> keyProperty="id" useGeneratedKeys="true"</#if>>
+        INSERT INTO ${table.sqlName} 
+        <trim prefix="(" suffix=")" suffixOverrides="," >
+        <#list table.notPkColumns as column>
+            <#if column.sqlName != "create_time" && column.sqlName != "update_time">
+              <if test="${column.sqlName} != null">
+              ${column.sqlName},
+              </if>
+            <#else>
+              <if test="true">
+              ${column.sqlName},
+              </if>
+            </#if>
+        </#list>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides="," >
+        <#list table.notPkColumns as column>
+          <#if column.sqlName != "create_time" && column.sqlName != "update_time">
+            <if test="${column.sqlName} != null">
+            ${r"#{"}${column.sqlName}${r"}"},
+            </if>
+          <#else>
+            <if test="true">
+            now(),
+            </if>
+          </#if>
+        </#list>        
+        </trim>  
+	</insert>
+	
+    <#if batchSupport == "true">
+	<insert id="addBatch${className}">
+    INSERT INTO ${table.sqlName} (
+        <#list table.notPkColumns as column>
+            ${column.sqlName} <#if column_has_next>,</#if>
+        </#list>
+    ) VALUES
+    <foreach collection ="list" item="item" separator =",">
+    ( 
+       <#list table.notPkColumns as column>
+         <#if column.sqlName != "create_time" && column.sqlName != "update_time">
+            ${r"#{item."}${column.sqlName}${r"}"}<#if column_has_next>,</#if>
+         <#else>
+            now()<#if column_has_next>,</#if>
+         </#if>
+       </#list>
+    )
+    </foreach >
+    </insert>
+    </#if>
+
+	<update id="mod${className}" parameterType="${entityPackage}.${className}">
+        UPDATE ${table.sqlName} 
+            <set>
+            <#list table.notPkColumns as column>
+                <#if column.sqlName != "create_time" && column.sqlName != "update_time">
+					<#if column.sqlTypeName?upper_case == "VARCHAR" ||  column.sqlTypeName?upper_case =="CHAR">
+					<if test="${column.sqlName} != null">
+						${column.sqlName} = ${r"#{"}${column.sqlName}${r"}"},
+					</if>
+					<#else>
+					<if test="${column.sqlName} != null">
+						${column.sqlName} = ${r"#{"}${column.sqlName}${r"}"},
+					</if>
+					</#if>
+                </#if>
+            </#list>
+            </set>
+        WHERE 
+        <#list table.pkColumns as column>
+            ${column.sqlName} = ${r"#{"}${column.underscoreName}${r"}"}
+            <#if column_has_next>
+             and 
+            </#if>
+        </#list>    
+	</update>
+	
+    <#if batchSupport == "true">
+    <update id="modBatch${className}" parameterType="java.util.List">
+      <foreach collection="list" item="item" index="index" open="" close="" separator=";">  
+        UPDATE ${table.sqlName} 
+            <set>
+            <#list table.notPkColumns as column>
+                <#if column.sqlName != "create_time" && column.sqlName != "update_time">
+                    <#if column.sqlTypeName?upper_case == "VARCHAR" ||  column.sqlTypeName?upper_case =="CHAR">
+                    <if test="item.${column.sqlName} != null">
+                        ${column.sqlName} = ${r"#{item."}${column.sqlName}${r"}"},
+                    </if>
+                    <#else>
+                    <if test="item.${column.sqlName} != null">
+                        ${column.sqlName} = ${r"#{item."}${column.sqlName}${r"}"},
+                    </if>
+                    </#if>
+                </#if>
+            </#list>
+            </set>
+        WHERE 
+        <#list table.pkColumns as column>
+            ${column.sqlName} = ${r"#{item."}${column.underscoreName}${r"}"}
+            <#if column_has_next>
+             and 
+            </#if>
+        </#list>    
+      </foreach>  
+    </update>
+    </#if>
+
+    <#if longId == "true">
+	<delete id="del${className}" parameterType="java.lang.Long">
+    <#else>
+	<delete id="del${className}" parameterType="java.lang.Integer">
+    </#if>
+        DELETE FROM ${table.sqlName} 
+         WHERE
+		   <#list table.pkColumns as pk>
+           ${pk.sqlName} = ${r"#{"}${pk.sqlName}${r"}"}
+           <#if pk_has_next>
+            and 
+           </#if>
+           </#list>
+	</delete>
+</mapper>
